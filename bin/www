@@ -1,0 +1,55 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('module_base_server:server');
+var fs = require('fs');
+var http = require('http');
+var https = require('https');
+
+
+var intermediateCertificate = fs.readFileSync('/home/web/ssl/20190124/Apache/RapidsslDigiCert-Newchain.pem', 'utf8');
+var options = {
+    key : fs.readFileSync('/home/web/ssl/20190124/Apache/key.pem', 'utf8'),
+    cert : fs.readFileSync('/home/web/ssl/20190124/Apache/cert.pem', 'utf8'),
+    ca : [intermediateCertificate],
+    passphrase: 'kribb123!@#'
+};
+
+var secureHttp = https.createServer(options, app);
+secureHttp.listen(443);
+secureHttp.on('error', onErrorHttp);
+secureHttp.on('listening', onListenSecureHttp);
+
+function onErrorHttp(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(secureHttp.address().port + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(secureHttp.address().port + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+function onListenSecureHttp() {
+  debug('Listening on ' + secureHttp.address().port);
+}
+
+
+http.createServer(function (req, res) {
+    res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
+    res.end();
+}).listen(80);
+
